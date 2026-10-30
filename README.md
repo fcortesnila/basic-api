@@ -67,7 +67,8 @@ This project was built with Codex to demonstrate a small, reviewable coding task
 
 - **Task:** Create a Python FastAPI phone directory with two GET endpoints and three POST endpoints.
 - **Changes:** Codex implemented list, get, create, edit, and delete routes using in-memory storage; added Docker support, focused `TestClient` tests, and a GitHub Actions test workflow.
-- **Review:** A review checked update and delete behavior and the test coverage. It flagged that create-field validation cases are combined and the generated-ID assertion only checks for a non-empty value. Those test improvements remain outstanding; production behavior was left unchanged.
-- **Validation:** The local test command could not start because Python was unavailable in the environment. The Docker engine was also unavailable, so an image build was not run. The workflow is configured to run `python -m pytest -q` on pushes and pull requests.
+- **Review:** A review checked update and delete behavior and test coverage. It found that create-field validation cases were grouped together and the generated-ID check only required a non-empty value. The tests now check each invalid field independently, confirm the returned ID is a UUID stored in the directory, and identify the invalid field in the validation response. Production API behavior was unchanged.
+- **Validation:** The tightened test suite passed in [GitHub Actions run #5](https://github.com/fcortesnila/basic-api/actions/runs/40998575101). The local test command could not start because Python was unavailable, and a Docker image build could not run because the Docker engine was unavailable.
 
 For development, install the development dependencies with `python -m pip install -r requirements-dev.txt`, run tests with `python -m pytest -q`, and start the app with `fastapi dev main.py`.
+
