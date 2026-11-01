@@ -8,11 +8,11 @@ WORKDIR /app
 COPY requirements.lock ./
 RUN pip install --no-cache-dir --require-hashes -r requirements.lock
 
-COPY main.py ./
+COPY app ./app
 
 EXPOSE 8000
 
 RUN useradd --create-home --uid 10001 appuser
 USER appuser
 
-CMD ["fastapi", "run", "main.py", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["fastapi", "run", "app/main.py", "--host", "0.0.0.0", "--port", "8000"]

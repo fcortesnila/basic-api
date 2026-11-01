@@ -10,7 +10,7 @@ Requires Python 3.10 or newer.
 py -m venv .venv
 .venv\Scripts\Activate.ps1
 py -m pip install -r requirements.txt
-fastapi dev main.py
+fastapi dev app/main.py
 ```
 
 Open <http://127.0.0.1:8000/docs> for the interactive API documentation.
@@ -75,4 +75,4 @@ This project was built with Codex to demonstrate a small, reviewable coding task
 - **Review:** A review checked update and delete behavior and test coverage. It found that create-field validation cases were grouped together and the generated-ID check only required a non-empty value. The tests now check each invalid field independently, confirm the returned ID is a UUID stored in the directory, and identify the invalid field in the validation response. Production API behavior was unchanged.
 - **Validation:** The tightened test suite passed in [GitHub Actions run #5](https://github.com/fcortesnila/basic-api/actions/runs/40998575101). The local test command could not start because Python was unavailable, and a Docker image build could not run because the Docker engine was unavailable.
 
-For development, install the development dependencies with `python -m pip install -r requirements-dev.txt`, run tests with `python -m pytest -q`, and start the app with `fastapi dev main.py`.
+For development, install the development dependencies with `python -m pip install -r requirements-dev.txt`, run tests with `python -m pytest -q`, and start the app with `fastapi dev app/main.py`.

@@ -3,7 +3,8 @@ from uuid import UUID
 import pytest
 from fastapi.testclient import TestClient
 
-from main import app, phone_directory
+from app.directory import phone_directory
+from app.main import app
 
 
 @pytest.fixture()
