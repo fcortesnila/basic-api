@@ -2,7 +2,7 @@ from typing import Annotated
 from uuid import UUID, uuid4
 
 from fastapi import FastAPI, HTTPException, status
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 app = FastAPI(
     title="Basic Phone Directory API",
@@ -14,7 +14,7 @@ app = FastAPI(
 class UserInput(BaseModel):
     name: str = Field(min_length=1, max_length=100)
     phone: str = Field(min_length=3, max_length=30)
-    email: str | None = Field(default=None, max_length=254)
+    email: EmailStr | None = Field(default=None, max_length=254)
 
 
 class User(UserInput):
@@ -26,7 +26,7 @@ class User(UserInput):
 class UserUpdate(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=100)
     phone: str | None = Field(default=None, min_length=3, max_length=30)
-    email: str | None = Field(default=None, max_length=254)
+    email: EmailStr | None = Field(default=None, max_length=254)
 
 
 # Demo storage: entries are lost when the server restarts.

@@ -91,6 +91,22 @@ def test_create_rejects_invalid_field_lengths(
     assert client.get("/users").json() == []
 
 
+@pytest.mark.parametrize("email", ["not-an-email", "avery@", "avery@example..com"])
+def test_create_rejects_invalid_email_format(client: TestClient, email: str) -> None:
+    response = client.post(
+        "/users",
+        json={
+            "name": "Avery Chen",
+            "phone": "+1-416-555-0100",
+            "email": email,
+        },
+    )
+
+    assert response.status_code == 422
+    assert response.json()["detail"][0]["loc"][-1] == "email"
+    assert client.get("/users").json() == []
+
+
 def test_edit_user_updates_one_field_and_preserves_other_fields(client: TestClient) -> None:
     created = create_user(client)
 
@@ -146,6 +162,19 @@ def test_edit_rejects_invalid_field_length_without_changing_user(client: TestCli
     response = client.patch(f"/users/{created['id']}", json={"phone": "12"})
 
     assert response.status_code == 422
+    assert client.get(f"/users/{created['id']}").json() == created
+
+
+@pytest.mark.parametrize("email", ["not-an-email", "avery@"])
+def test_edit_rejects_invalid_email_without_changing_user(
+    client: TestClient, email: str
+) -> None:
+    created = create_user(client)
+
+    response = client.patch(f"/users/{created['id']}", json={"email": email})
+
+    assert response.status_code == 422
+    assert response.json()["detail"][0]["loc"][-1] == "email"
     assert client.get(f"/users/{created['id']}").json() == created
 
 

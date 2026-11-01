@@ -59,6 +59,8 @@ Edit body example (include only fields to change):
 }
 ```
 
+When provided, `email` must be a valid email address.
+
 Storage is in memory, so entries reset when the app restarts. This demo is not intended for real personal or patient data.
 
 ## Development and Codex workflow
