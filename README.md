@@ -15,6 +15,36 @@ fastapi dev app/main.py
 
 Open <http://127.0.0.1:8000/docs> for the interactive API documentation.
 
+## Agent prototype
+
+The optional OpenAI-backed agent can answer directory questions and prepare create or update proposals. It only reads directory data or stages proposals; it never applies a change from `/agent/chat`.
+
+Set an API key before starting the server:
+
+```powershell
+$env:OPENAI_API_KEY = "your-api-key"
+$env:OPENAI_MODEL = "gpt-4.1-mini"
+fastapi dev app/main.py
+```
+
+Send a request to `POST /agent/chat`:
+
+```json
+{
+  "message": "Change Avery's phone number to +1-416-555-0199."
+}
+```
+
+If the agent proposes a change, the response includes a `confirmation_id` and a preview. Apply it only by sending that ID to `POST /agent/confirm`:
+
+```json
+{
+  "confirmation_id": "value-returned-in-the-proposal"
+}
+```
+
+Confirmations expire after 10 minutes and can be used once. Pending proposals are stored in memory and are lost when the app restarts. The agent has no delete tool. Existing direct directory endpoints remain available independently of the agent confirmation flow. This demo has no authentication; keep it local and never use real personal or patient data. Requests and directory information used to answer them are sent to OpenAI.
+
 ## Run with Docker
 
 Build the image from this folder:
@@ -43,6 +73,8 @@ Then open <http://localhost:8000/docs>. Stop the container with `Ctrl+C`.
 | POST | `/users` | Create an entry |
 | PATCH | `/users/{user_id}` | Edit one or more fields |
 | DELETE | `/users/{user_id}` | Delete an entry |
+| POST | `/agent/chat` | Ask a question or prepare a create/update proposal |
+| POST | `/agent/confirm` | Confirm a pending agent proposal |
 
 Create body example:
 

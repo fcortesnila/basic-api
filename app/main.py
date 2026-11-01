@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 
+from app.agent_routes import router as agent_router
 from app.routes import router
 
 app = FastAPI(
@@ -8,3 +9,4 @@ app = FastAPI(
     version="1.0.0",
 )
 app.include_router(router)
+app.include_router(agent_router)
