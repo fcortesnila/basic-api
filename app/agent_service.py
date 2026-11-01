@@ -127,6 +127,14 @@ def get_openai_client() -> OpenAI:
     return OpenAI(api_key=api_key, timeout=30.0, max_retries=1)
 
 
+def require_data_sharing_opt_in() -> None:
+    if os.getenv("AGENT_SHARE_DIRECTORY_DATA", "").lower() != "true":
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Agent data sharing is disabled; explicitly set AGENT_SHARE_DIRECTORY_DATA=true to enable it.",
+        )
+
+
 def _validation_error(error: ValidationError) -> dict[str, object]:
     return {
         "error": "Invalid tool arguments",
@@ -226,6 +234,7 @@ def _run_tool(
 
 
 def chat(message: str) -> AgentChatResponse:
+    require_data_sharing_opt_in()
     client = get_openai_client()
     model = os.getenv("OPENAI_MODEL", "gpt-4.1-mini")
     input_items: list[dict[str, object]] = [{"role": "user", "content": message}]

@@ -17,23 +17,27 @@ Open <http://127.0.0.1:8000/docs> for the interactive API documentation.
 
 ## Agent prototype
 
-The optional OpenAI-backed agent can answer directory questions and prepare create or update proposals. It only reads directory data or stages proposals; it never applies a change from `/agent/chat`.
+The optional OpenAI-backed agent can answer directory questions and prepare create or update proposals. It only reads directory data or stages proposals; it never applies a change from `/agent/chat`. Agent routes require a bearer token. Directory information is not sent to OpenAI unless `AGENT_SHARE_DIRECTORY_DATA=true` is explicitly configured.
 
-Set an API key before starting the server:
+Configure a strong agent token, explicitly enable data sharing, and set an API key before starting the server:
 
 ```powershell
+$env:AGENT_API_TOKEN = py -c "import secrets; print(secrets.token_urlsafe(32))"
+$env:AGENT_SHARE_DIRECTORY_DATA = "true"
 $env:OPENAI_API_KEY = "your-api-key"
 $env:OPENAI_MODEL = "gpt-4.1-mini"
 fastapi dev app/main.py
 ```
 
-Send a request to `POST /agent/chat`:
+Send an authenticated request to `POST /agent/chat`:
 
 ```json
 {
   "message": "Change Avery's phone number to +1-416-555-0199."
 }
 ```
+
+Include `Authorization: Bearer <AGENT_API_TOKEN>` in requests to both agent endpoints.
 
 If the agent proposes a change, the response includes a `confirmation_id` and a preview. Apply it only by sending that ID to `POST /agent/confirm`:
 
@@ -43,7 +47,9 @@ If the agent proposes a change, the response includes a `confirmation_id` and a 
 }
 ```
 
-Confirmations expire after 10 minutes and can be used once. Pending proposals are stored in memory and are lost when the app restarts. The agent has no delete tool. Existing direct directory endpoints remain available independently of the agent confirmation flow. This demo has no authentication; keep it local and never use real personal or patient data. Requests and directory information used to answer them are sent to OpenAI.
+Confirmations expire after 10 minutes and can be used once. Pending proposals are stored in memory and are lost when the app restarts. The agent has no delete tool.
+
+The bearer token protects only `/agent` routes. The core `/users` endpoints remain unauthenticated, so this demo is not safe to expose to untrusted users or the public internet. Keep it local, use synthetic data, and never commit tokens or API keys. When sharing is enabled, user prompts and directory data returned by tools are sent to OpenAI; review the provider's data-handling terms before enabling this for any real data. `store=False` is used for Responses API calls, but that setting is not a substitute for reviewing provider retention policies. For broader use, add proper user authentication/authorization across the core API and review privacy, consent, transport security, and retention requirements.
 
 ## Run with Docker
 

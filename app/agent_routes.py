@@ -1,6 +1,7 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 
 from app import agent_service
+from app.agent_auth import require_agent_auth
 from app.agent_schemas import (
     AgentChatRequest,
     AgentChatResponse,
@@ -8,7 +9,11 @@ from app.agent_schemas import (
     AgentConfirmResponse,
 )
 
-router = APIRouter(prefix="/agent", tags=["agent"])
+router = APIRouter(
+    prefix="/agent",
+    tags=["agent"],
+    dependencies=[Depends(require_agent_auth)],
+)
 
 
 @router.post("/chat", response_model=AgentChatResponse, summary="Ask the directory agent")

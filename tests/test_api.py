@@ -9,10 +9,15 @@ from app import agent_service
 from app.directory import phone_directory
 from app.main import app
 
+AGENT_TOKEN = "test-agent-token-with-at-least-32-characters"
+AGENT_HEADERS = {"Authorization": f"Bearer {AGENT_TOKEN}"}
+
 
 @pytest.fixture()
-def client():
+def client(monkeypatch: pytest.MonkeyPatch):
     """Keep the module-level in-memory directory isolated between tests."""
+    monkeypatch.setenv("AGENT_API_TOKEN", AGENT_TOKEN)
+    monkeypatch.setenv("AGENT_SHARE_DIRECTORY_DATA", "true")
     phone_directory.clear()
     with agent_service._PROPOSALS_LOCK:
         agent_service._PENDING_ACTIONS.clear()
@@ -297,7 +302,9 @@ def test_agent_read_tool_uses_directory_and_does_not_mutate(
     )
     monkeypatch.setattr(agent_service, "get_openai_client", lambda: fake_client)
 
-    response = client.post("/agent/chat", json={"message": "Look up Avery."})
+    response = client.post(
+        "/agent/chat", json={"message": "Look up Avery."}, headers=AGENT_HEADERS
+    )
 
     assert response.status_code == 200
     assert response.json()["answer"] == "Found Avery's directory entry."
@@ -329,7 +336,11 @@ def test_agent_list_users_tool_returns_directory_entries(
     )
     monkeypatch.setattr(agent_service, "get_openai_client", lambda: fake_client)
 
-    response = client.post("/agent/chat", json={"message": "How many entries are there?"})
+    response = client.post(
+        "/agent/chat",
+        json={"message": "How many entries are there?"},
+        headers=AGENT_HEADERS,
+    )
 
     assert response.status_code == 200
     assert response.json()["proposals"] == []
@@ -365,6 +376,7 @@ def test_agent_create_requires_confirmation_and_confirmation_is_one_time(
     proposed = client.post(
         "/agent/chat",
         json={"message": "Add Avery Chen, +1-416-555-0100, avery@example.com."},
+        headers=AGENT_HEADERS,
     )
 
     assert proposed.status_code == 200
@@ -380,10 +392,12 @@ def test_agent_create_requires_confirmation_and_confirmation_is_one_time(
     confirmed = client.post(
         "/agent/confirm",
         json={"confirmation_id": proposal["confirmation_id"]},
+        headers=AGENT_HEADERS,
     )
     repeated = client.post(
         "/agent/confirm",
         json={"confirmation_id": proposal["confirmation_id"]},
+        headers=AGENT_HEADERS,
     )
 
     assert confirmed.status_code == 200
@@ -418,6 +432,7 @@ def test_agent_update_requires_confirmation(
     proposed = client.post(
         "/agent/chat",
         json={"message": f"Change {created['name']}'s phone number."},
+        headers=AGENT_HEADERS,
     )
 
     assert proposed.status_code == 200
@@ -429,6 +444,7 @@ def test_agent_update_requires_confirmation(
     confirmed = client.post(
         "/agent/confirm",
         json={"confirmation_id": proposal["confirmation_id"]},
+        headers=AGENT_HEADERS,
     )
 
     assert confirmed.status_code == 200
@@ -456,7 +472,9 @@ def test_agent_rejects_invalid_tool_arguments_without_proposal_or_write(
     )
     monkeypatch.setattr(agent_service, "get_openai_client", lambda: fake_client)
 
-    response = client.post("/agent/chat", json={"message": "Add an entry."})
+    response = client.post(
+        "/agent/chat", json={"message": "Add an entry."}, headers=AGENT_HEADERS
+    )
 
     assert response.status_code == 200
     assert response.json()["proposals"] == []
@@ -475,7 +493,80 @@ def test_agent_without_api_key_returns_configuration_error(
 ) -> None:
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
 
-    response = client.post("/agent/chat", json={"message": "List users."})
+    response = client.post(
+        "/agent/chat", json={"message": "List users."}, headers=AGENT_HEADERS
+    )
 
     assert response.status_code == 503
     assert "OPENAI_API_KEY" in response.json()["detail"]
+
+
+@pytest.mark.parametrize(
+    ("path", "payload"),
+    [
+        ("/agent/chat", {"message": "List users."}),
+        ("/agent/confirm", {"confirmation_id": "a" * 32}),
+    ],
+)
+def test_agent_routes_require_bearer_token_but_core_api_remains_public(
+    client: TestClient, path: str, payload: dict[str, str]
+) -> None:
+    response = client.post(path, json=payload)
+
+    assert response.status_code == 401
+    assert response.headers["www-authenticate"] == "Bearer"
+    assert client.get("/users").status_code == 200
+
+
+def test_agent_rejects_invalid_bearer_token(client: TestClient) -> None:
+    response = client.post(
+        "/agent/chat",
+        json={"message": "List users."},
+        headers={"Authorization": "Bearer invalid-token"},
+    )
+
+    assert response.status_code == 401
+
+
+def test_agent_rejects_short_configured_token(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("AGENT_API_TOKEN", "too-short")
+
+    response = client.post(
+        "/agent/chat", json={"message": "List users."}, headers=AGENT_HEADERS
+    )
+
+    assert response.status_code == 503
+    assert "authentication" in response.json()["detail"].lower()
+
+
+def test_agent_requires_explicit_directory_data_sharing_opt_in(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("AGENT_SHARE_DIRECTORY_DATA", "false")
+    monkeypatch.setattr(
+        agent_service,
+        "get_openai_client",
+        lambda: pytest.fail("OpenAI client must not be created without opt-in"),
+    )
+
+    response = client.post(
+        "/agent/chat", json={"message": "List users."}, headers=AGENT_HEADERS
+    )
+
+    assert response.status_code == 503
+    assert "AGENT_SHARE_DIRECTORY_DATA=true" in response.json()["detail"]
+
+
+def test_agent_requires_configured_authentication_token(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.delenv("AGENT_API_TOKEN", raising=False)
+
+    response = client.post(
+        "/agent/chat", json={"message": "List users."}, headers=AGENT_HEADERS
+    )
+
+    assert response.status_code == 503
+    assert "authentication" in response.json()["detail"].lower()
