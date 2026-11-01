@@ -38,8 +38,8 @@ Then open <http://localhost:8000/docs>. Stop the container with `Ctrl+C`.
 | GET | `/users` | List all directory entries |
 | GET | `/users/{user_id}` | Get one entry by UUID |
 | POST | `/users` | Create an entry |
-| POST | `/users/{user_id}` | Edit one or more fields |
-| POST | `/users/{user_id}/delete` | Delete an entry |
+| PATCH | `/users/{user_id}` | Edit one or more fields |
+| DELETE | `/users/{user_id}` | Delete an entry |
 
 Create body example:
 
@@ -65,8 +65,8 @@ Storage is in memory, so entries reset when the app restarts. This demo is not i
 
 This project was built with Codex to demonstrate a small, reviewable coding task.
 
-- **Task:** Create a Python FastAPI phone directory with two GET endpoints and three POST endpoints.
-- **Changes:** Codex implemented list, get, create, edit, and delete routes using in-memory storage; added Docker support, focused `TestClient` tests, and a GitHub Actions test workflow.
+- **Task:** Create a Python FastAPI phone directory with list, get, create, edit, and delete endpoints.
+- **Changes:** Codex implemented list, get, create, edit, and delete routes using in-memory storage. The update and delete endpoints use `PATCH` and `DELETE`; the app also includes Docker support, focused `TestClient` tests, and a GitHub Actions test workflow.
 - **Review:** A review checked update and delete behavior and test coverage. It found that create-field validation cases were grouped together and the generated-ID check only required a non-empty value. The tests now check each invalid field independently, confirm the returned ID is a UUID stored in the directory, and identify the invalid field in the validation response. Production API behavior was unchanged.
 - **Validation:** The tightened test suite passed in [GitHub Actions run #5](https://github.com/fcortesnila/basic-api/actions/runs/40998575101). The local test command could not start because Python was unavailable, and a Docker image build could not run because the Docker engine was unavailable.
 

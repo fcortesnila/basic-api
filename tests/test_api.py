@@ -94,7 +94,7 @@ def test_create_rejects_invalid_field_lengths(
 def test_edit_user_updates_one_field_and_preserves_other_fields(client: TestClient) -> None:
     created = create_user(client)
 
-    response = client.post(f"/users/{created['id']}", json={"phone": "+1-416-555-0199"})
+    response = client.patch(f"/users/{created['id']}", json={"phone": "+1-416-555-0199"})
 
     assert response.status_code == 200
     assert response.json() == {
@@ -106,7 +106,7 @@ def test_edit_user_updates_one_field_and_preserves_other_fields(client: TestClie
 def test_edit_user_updates_multiple_fields(client: TestClient) -> None:
     created = create_user(client)
 
-    response = client.post(
+    response = client.patch(
         f"/users/{created['id']}",
         json={"name": "Avery C.", "email": "avery.c@example.com"},
     )
@@ -122,7 +122,7 @@ def test_edit_user_updates_multiple_fields(client: TestClient) -> None:
 def test_edit_rejects_empty_patch_without_changing_user(client: TestClient) -> None:
     created = create_user(client)
 
-    response = client.post(f"/users/{created['id']}", json={})
+    response = client.patch(f"/users/{created['id']}", json={})
 
     assert response.status_code == 400
     assert client.get(f"/users/{created['id']}").json() == created
@@ -134,7 +134,7 @@ def test_edit_rejects_null_values_without_changing_user(
 ) -> None:
     created = create_user(client)
 
-    response = client.post(f"/users/{created['id']}", json=payload)
+    response = client.patch(f"/users/{created['id']}", json=payload)
 
     assert response.status_code == 422
     assert client.get(f"/users/{created['id']}").json() == created
@@ -143,7 +143,7 @@ def test_edit_rejects_null_values_without_changing_user(
 def test_edit_rejects_invalid_field_length_without_changing_user(client: TestClient) -> None:
     created = create_user(client)
 
-    response = client.post(f"/users/{created['id']}", json={"phone": "12"})
+    response = client.patch(f"/users/{created['id']}", json={"phone": "12"})
 
     assert response.status_code == 422
     assert client.get(f"/users/{created['id']}").json() == created
@@ -153,8 +153,8 @@ def test_edit_rejects_invalid_field_length_without_changing_user(client: TestCli
     ("method", "path", "payload"),
     [
         ("get", "/users/{user_id}", None),
-        ("post", "/users/{user_id}", {"name": "Missing"}),
-        ("post", "/users/{user_id}/delete", None),
+        ("patch", "/users/{user_id}", {"name": "Missing"}),
+        ("delete", "/users/{user_id}", None),
     ],
 )
 def test_user_operations_return_404_for_missing_id(
@@ -174,7 +174,7 @@ def test_user_operations_return_404_for_missing_id(
 def test_delete_user_returns_no_content_and_removes_entry(client: TestClient) -> None:
     created = create_user(client)
 
-    response = client.post(f"/users/{created['id']}/delete")
+    response = client.delete(f"/users/{created['id']}")
 
     assert response.status_code == 204
     assert response.content == b""
@@ -184,11 +184,21 @@ def test_delete_user_returns_no_content_and_removes_entry(client: TestClient) ->
 
 def test_deleting_same_user_twice_returns_404(client: TestClient) -> None:
     created = create_user(client)
-    delete_response = client.post(f"/users/{created['id']}/delete")
+    delete_response = client.delete(f"/users/{created['id']}")
 
-    second_delete = client.post(f"/users/{created['id']}/delete")
+    second_delete = client.delete(f"/users/{created['id']}")
 
     assert delete_response.status_code == 204
     assert second_delete.status_code == 404
     assert client.get("/users").json() == []
 
+
+def test_legacy_edit_and_delete_routes_are_not_available(client: TestClient) -> None:
+    created = create_user(client)
+
+    legacy_edit = client.post(f"/users/{created['id']}", json={"phone": "555-0101"})
+    legacy_delete = client.post(f"/users/{created['id']}/delete")
+
+    assert legacy_edit.status_code == 405
+    assert legacy_delete.status_code == 404
+    assert client.get(f"/users/{created['id']}").json() == created

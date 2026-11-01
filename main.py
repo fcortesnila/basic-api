@@ -56,7 +56,7 @@ def create_user(user_input: UserInput) -> User:
     return user
 
 
-@app.post("/users/{user_id}", response_model=User, summary="Edit a user")
+@app.patch("/users/{user_id}", response_model=User, summary="Edit a user")
 def edit_user(user_id: UUID, changes: UserUpdate) -> User:
     """Update the provided fields on an existing directory entry."""
     user = phone_directory.get(user_id)
@@ -74,7 +74,7 @@ def edit_user(user_id: UUID, changes: UserUpdate) -> User:
     return updated_user
 
 
-@app.post("/users/{user_id}/delete", status_code=status.HTTP_204_NO_CONTENT, summary="Delete a user")
+@app.delete("/users/{user_id}", status_code=status.HTTP_204_NO_CONTENT, summary="Delete a user")
 def delete_user(user_id: UUID) -> None:
     """Remove a directory entry."""
     if phone_directory.pop(user_id, None) is None:
