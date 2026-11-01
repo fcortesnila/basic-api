@@ -23,6 +23,9 @@ Build the image from this folder:
 docker build -t basic-api .
 ```
 
+The image installs the pinned runtime dependencies from `requirements.lock` and runs as a non-root user.
+To refresh the lockfile with Python 3.12, install `pip-tools` and run `pip-compile --generate-hashes --strip-extras --output-file=requirements.lock requirements.txt`.
+
 Start the container:
 
 ```powershell
