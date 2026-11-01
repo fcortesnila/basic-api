@@ -191,3 +191,4 @@ def test_deleting_same_user_twice_returns_404(client: TestClient) -> None:
     assert delete_response.status_code == 204
     assert second_delete.status_code == 404
     assert client.get("/users").json() == []
+
