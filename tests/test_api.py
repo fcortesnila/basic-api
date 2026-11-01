@@ -1,3 +1,5 @@
+from uuid import UUID
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -33,7 +35,8 @@ def test_create_user_returns_generated_id_and_fields(client: TestClient) -> None
 
     assert response.status_code == 201
     body = response.json()
-    assert body["id"]
+    generated_id = UUID(body["id"])
+    assert generated_id in phone_directory
     assert body["name"] == "Avery Chen"
     assert body["phone"] == "+1-416-555-0100"
     assert body["email"] is None
@@ -58,13 +61,33 @@ def test_get_user_returns_matching_entry(client: TestClient) -> None:
     assert response.json() == created
 
 
-def test_create_rejects_invalid_field_lengths(client: TestClient) -> None:
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("name", ""),
+        ("name", "N" * 101),
+        ("phone", "12"),
+        ("phone", "1" * 31),
+        ("email", "a" * 255),
+    ],
+)
+def test_create_rejects_invalid_field_lengths(
+    client: TestClient, field: str, value: str
+) -> None:
+    payload = {
+        "name": "Avery Chen",
+        "phone": "+1-416-555-0100",
+        "email": "avery@example.com",
+    }
+    payload[field] = value
+
     response = client.post(
         "/users",
-        json={"name": "", "phone": "12", "email": "a" * 255},
+        json=payload,
     )
 
     assert response.status_code == 422
+    assert response.json()["detail"][0]["loc"][-1] == field
     assert client.get("/users").json() == []
 
 
